@@ -1,9 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configurationDescriptor version="62">
   <logicalFolder name="root" displayName="root" projectFiles="true">
+    <logicalFolder name="dspic-libs" displayName="dspic-libs" projectFiles="true">
+      <itemPath>dspic-libs/adc.c</itemPath>
+      <itemPath>dspic-libs/buzzer.c</itemPath>
+      <itemPath>dspic-libs/keyboard.c</itemPath>
+      <itemPath>dspic-libs/LCDlib.c</itemPath>
+      <itemPath>dspic-libs/leds.c</itemPath>
+      <itemPath>dspic-libs/timer.c</itemPath>
+      <itemPath>dspic-libs/delay.s</itemPath>
+    </logicalFolder>
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <itemPath>dspic-libs/LCDlib.h</itemPath>
+      <itemPath>dspic-libs/adc.h</itemPath>
+      <itemPath>dspic-libs/buzzer.h</itemPath>
+      <itemPath>dspic-libs/timer.h</itemPath>
+      <itemPath>dspic-libs/delay.h</itemPath>
+      <itemPath>dspic-libs/leds.h</itemPath>
+      <itemPath>dspic-libs/keyboard.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -20,6 +36,9 @@
       <itemPath>Makefile</itemPath>
     </logicalFolder>
   </logicalFolder>
+  <sourceRootList>
+    <Elem>dspic-libs</Elem>
+  </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
     <conf name="default" type="2">
@@ -98,6 +117,23 @@
         <property key="additional-options-chop-files" value="false"/>
       </C30-AR>
       <C30-AS>
+        <property key="assembler-symbols" value=""/>
+        <property key="expand-macros" value="false"/>
+        <property key="extra-include-directories-for-assembler" value=""/>
+        <property key="extra-include-directories-for-preprocessor" value=""/>
+        <property key="false-conditionals" value="false"/>
+        <property key="keep-locals" value="false"/>
+        <property key="list-assembly" value="false"/>
+        <property key="list-section-info" value="false"/>
+        <property key="list-source" value="false"/>
+        <property key="list-symbols" value="false"/>
+        <property key="oXC16asm-extra-opts" value=""/>
+        <property key="oXC16asm-list-to-file" value="false"/>
+        <property key="omit-debug-dirs" value="false"/>
+        <property key="omit-forms" value="false"/>
+        <property key="preprocessor-macros" value=""/>
+        <property key="relax" value="false"/>
+        <property key="warning-level" value="emit-warnings"/>
       </C30-AS>
       <C30-LD>
         <property key="additional-options-use-response-files" value="false"/>
