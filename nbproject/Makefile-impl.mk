@@ -24,7 +24,7 @@ CLEAN_SUBPROJECTS=${CLEAN_SUBPROJECTS_${SUBPROJECTS}}
 
 
 # Project Name
-PROJECTNAME=elevator-simulator.X
+PROJECTNAME=elevator-simulator
 
 # Active Configuration
 DEFAULTCONF=default
