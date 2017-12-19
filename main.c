@@ -17,8 +17,8 @@
 
 #define TRUE 1
 #define FALSE 0
-#define MAX_HEIGHT 200 // La altura máxima soportada es de 65536
-#define MIN_HEIGHT 50
+#define MAX_HEIGHT 60 // La altura máxima soportada es de 65536
+#define MIN_HEIGHT 0
 #define NUM_FLOORS 6
 #define FLOOR_QUEUE_SIZE 6
 
@@ -57,9 +57,11 @@ static struct FloorQueue fq;
 
 
 /* CONTROL */
-unsigned char height_floor_map[NUM_FLOORS];
 unsigned char control_elevator_stopped = TRUE;
 unsigned char control_elevator_current_height = 0;
+
+inline unsigned short getFloor(unsigned char height);
+inline unsigned char getHeight(unsigned short floor);
 
 inline void enqueueFloor(unsigned short floor);
 inline void dequeueAndSendFloor(void);
@@ -131,17 +133,14 @@ void main_planta(void){
 
             }
         }
+        int i;
+        for (i = 0; i < 100; i++) Delay15ms(); // Simulacion de abrir y cerrar puertas
+
     }
 }
 
 void main_control(void){
     floorQueueInit();
-    height_floor_map[0] = 60;
-    height_floor_map[1] = 70;
-    height_floor_map[2] = 80;
-    height_floor_map[3] = 90;
-    height_floor_map[4] = 100;
-    height_floor_map[5] = 110;
 
     while(1){
         int i;
@@ -219,17 +218,32 @@ inline void sendMovementStatus(struct MovementStatus *ms){
     transmitCAN(MOVEMENT_STATUS_SID, data, 2);
 }
 
-inline void enqueueFloor(unsigned short floor){
-    floorQueuePut(floor);
+inline unsigned short getFloor(unsigned char height){
+    return height / 10;
+}
+inline unsigned char getHeight(unsigned short floor){
+    return floor * 10;
+}
 
+inline void enqueueFloor(unsigned short floor){
+    if (floor == getFloor(control_elevator_current_height)){
+        return; // Si se selecciona la misma planta donde se encuentra, se omite
+    }
+
+    setLed(floor, LED_ON);
+    
     if (control_elevator_stopped && floorQueueIsEmpty()){
+        floorQueuePut(floor);
         dequeueAndSendFloor();
+    } else {
+        floorQueuePut(floor);
     }
 }
 
 inline void dequeueAndSendFloor(void){
     struct MoveRequest mr;
-    mr.goal_height = floorQueuePop();
+    unsigned char floor = floorQueuePop();
+    mr.goal_height = getHeight(floor);
     sendMoveRequest(&mr);
 }
 
@@ -244,8 +258,6 @@ inline void floorQueuePut(unsigned short floor){
         return; // Evitar plantas duplicadas y cola llena
     }
 
-    setLed(floor, LED_ON);
-
     fq.queue[fq.head] = floor;
     fq.head = (fq.head + 1) % FLOOR_QUEUE_SIZE;
     fq.len += 1;
@@ -259,8 +271,6 @@ inline unsigned short floorQueuePop(void){
     unsigned short floor = fq.queue[fq.tail];
     fq.tail = (fq.tail + 1) % FLOOR_QUEUE_SIZE;
     fq.len -= 1;
-
-    setLed(floor, LED_OFF);
 
     return floor;
 }
@@ -282,10 +292,18 @@ inline void sendMoveRequest(struct MoveRequest *mr){
     transmitCAN(MOVE_REQUEST_SID, (unsigned char *) mr, sizeof(struct MoveRequest));
 }
 
-inline void processMovementStatus(struct MovementStatus *ms){ //TODO: Demasiado compleja para estar en interrupcion?
+inline void processMovementStatus(struct MovementStatus *ms){
     control_elevator_current_height = ms->height;
+    static unsigned short floor;
 
     if (ms->height_reached){
+        LCDClear();
+        static char buffer[10];
+        sprintf(buffer, " Planta %u.", getFloor(ms->height));
+        LCDPrint(buffer);
+
+        floor = getFloor(ms->height);
+        setLed(floor, LED_OFF);
 
         if (floorQueueIsEmpty()){
             control_elevator_stopped = TRUE;
@@ -294,15 +312,9 @@ inline void processMovementStatus(struct MovementStatus *ms){ //TODO: Demasiado 
         }
     }
     else {
+        LCDClear();
+        LCDPrint(" En movimiento");
         control_elevator_stopped = FALSE;
-    }
-
-    if (control_elevator_stopped){
-        LCDClear();
-        LCDPrint("Parado");
-    } else {
-        LCDClear();
-        LCDPrint("En movimiento");
     }
 }
 
