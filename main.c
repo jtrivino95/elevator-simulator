@@ -42,7 +42,7 @@ struct MoveRequest {
 
 /* COLA DE PLANTAS */
 struct FloorQueue {
-    unsigned short *queue;
+    unsigned short queue[FLOOR_QUEUE_SIZE];
     unsigned short len, tail, head;
 };
 
@@ -90,12 +90,10 @@ int main(void) {
     initCAN();
     keyboardInit();
     initLeds();
-
     
     LCDPrint("0. Control");
     LCDMoveSecondLine();
     LCDPrint("1. Planta");
-
 
     short opt = -1;
     while(opt != 0 && opt != 1){
@@ -138,38 +136,6 @@ void main_planta(void){
 void main_control(void){
     floorQueueInit();
 
-
-    LCDClear();
-    floorQueuePut(0);
-    floorQueuePut(1);
-    floorQueuePut(3);
-    LCDMoveSecondLine();
-    floorQueuePut(5);
-    floorQueuePut(4);
-    floorQueuePut(2);
-//    floorQueuePut(5);
-//    floorQueuePut(2);
-//    floorQueuePut(4);
-    floorQueueContains(0);
-
-//    floorQueuePut(1);
-//    floorQueuePut(2);
-//    floorQueuePut(3);
-//    floorQueuePut(4);
-//    floorQueuePut(5);
-//    floorQueuePut(5);
-//    floorQueuePut(2);
-//    floorQueuePut(3);
-
-//    LCDClear();
-//    static char buffer[20];
-//    while(!floorQueueIsEmpty()){
-//        sprintf(buffer, " %u", fq.len);
-//        LCDPrint(buffer);
-//        LCDPrint(",");
-//    }
-    while(1);
-
     while(1){
         int i;
         for(i = 0; i < 10; ++i) Delay15ms(); // Para evitar que la tecla de seleccion anterior se solape
@@ -202,6 +168,16 @@ void main_control(void){
                 break;
             default:
                 continue;
+        }
+
+        LCDClear();
+        int idx;
+        for (i = 0; i < fq.len; ++i) {
+            idx = (fq.tail + i) % FLOOR_QUEUE_SIZE;
+            char buffer[10];
+            if(i==5) LCDMoveSecondLine();
+            sprintf(buffer, " %u", fq.queue[idx]);
+            LCDPrint(buffer);
         }
     }
 }
@@ -296,45 +272,39 @@ inline void floorQueueInit(){
     fq.head = 0;
     fq.tail = 0;
     fq.len = 0;
-    fq.queue[FLOOR_QUEUE_SIZE]; // array de tamanio FLOOR_QUEUE_SIZE
 }
 
 inline void floorQueuePut(unsigned short floor){
-//    if (floorQueueContains(floor)) return; // Evitar plantas duplicadas
+    if (floorQueueContains(floor) || fq.len == FLOOR_QUEUE_SIZE){
+        return; // Evitar plantas duplicadas y cola llena
+    }
 
     setLed(floor, LED_ON);
-
 
     fq.queue[fq.head] = floor;
     fq.head = (fq.head + 1) % FLOOR_QUEUE_SIZE;
     fq.len += 1;
-
-    char buffer[10];
-    sprintf(buffer, " %u:%u", fq.tail, fq.head);
-    LCDPrint(buffer);
-
 }
 
 inline unsigned short floorQueuePop(void){
-    if (floorQueueIsEmpty()) return 0; // TODO que hacer
-
+    if (fq.len == 0){
+        return 0; // TODO que hacer
+    }
+    
     unsigned short floor = fq.queue[fq.tail];
     fq.tail = (fq.tail + 1) % FLOOR_QUEUE_SIZE;
     fq.len -= 1;
 
     setLed(floor, LED_OFF);
+
     return floor;
 }
 
 inline unsigned char floorQueueContains(unsigned short floor){
-    unsigned short i;
-    static char buffer[20];
-
-    for (i = fq.tail; i < fq.head; i = (i + 1) % FLOOR_QUEUE_SIZE) {
-
-//        sprintf(buffer, " %u", fq.queue[i]);
-//        LCDPrint(buffer); LCDPrint(",");
-//        if(fq.queue[i] == floor) return TRUE;
+    unsigned short i, idx;
+    for (i = 0; i < fq.len; ++i) {
+        idx = (fq.tail + i) % FLOOR_QUEUE_SIZE;
+        if(fq.queue[idx] == floor) return TRUE;
     }
     return FALSE;
 }
