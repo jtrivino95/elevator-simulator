@@ -17,8 +17,8 @@
 
 #define TRUE 1
 #define FALSE 0
-#define MAX_HEIGHT 1000 // La altura máxima soportada es de 65536
-#define MIN_HEIGHT 200
+#define MAX_HEIGHT 200 // La altura máxima soportada es de 65536
+#define MIN_HEIGHT 50
 #define NUM_FLOORS 6
 #define FLOOR_QUEUE_SIZE 6
 
@@ -30,12 +30,12 @@
 
 /* ESTRUCTURAS DE PAQUETES */
 struct MovementStatus {
-    unsigned short height;
+    unsigned char height;
     unsigned char height_reached;
 };
 
 struct MoveRequest {
-    unsigned short goal_height;
+    unsigned char goal_height;
 };
 /* END ESTRUCTURAS DE PAQUETES */
 
@@ -57,11 +57,12 @@ static struct FloorQueue fq;
 
 
 /* CONTROL */
-static unsigned short height_floor_map[NUM_FLOORS] = { 200, 300, 400, 500, 600, 800 };
-static unsigned char elevator_stopped = TRUE; // TODO buena estrategia??
-static unsigned char control_elevator_current_height = TRUE; // TODO buena estrategia??
+unsigned char height_floor_map[NUM_FLOORS];
+unsigned char control_elevator_stopped = TRUE;
+unsigned char control_elevator_current_height = 0;
 
-inline void selectFloor(unsigned short floor);
+inline void enqueueFloor(unsigned short floor);
+inline void dequeueAndSendFloor(void);
 
 inline void processMovementStatus(struct MovementStatus *ms);
 inline void sendMoveRequest(struct MoveRequest *mr);
@@ -71,11 +72,11 @@ void main_control(void);
 
 
 /* PLANTA */
-unsigned short planta_elevator_current_height;
-unsigned short elevator_goal_height;
+unsigned char planta_elevator_current_height;
+unsigned char planta_elevator_goal_height;
 
 inline void processMoveRequest(struct MoveRequest *mr);
-inline void sendMovementStatus(void);
+inline void sendMovementStatus(struct MovementStatus *ms);
 inline void increaseHeight(void);
 inline void decreaseHeight(void);
 inline void printHeight(void);
@@ -101,15 +102,15 @@ int main(void) {
         LCDClear();
         switch(opt){
             case 0:
-                LCDPrint("Control");
+                LCDPrint(" Control");
                 main_control();
                 break;
             case 1:
-                LCDPrint("Planta");
+                LCDPrint(" Planta");
                 main_planta();
                 break;
             default:
-                LCDPrint("Opcion incorrecta");
+                LCDPrint(" Opcion incorrecta");
         }
     }
 
@@ -118,14 +119,14 @@ int main(void) {
 
 void main_planta(void){
     planta_elevator_current_height = MAX_HEIGHT;
-    elevator_goal_height = MIN_HEIGHT;
+    planta_elevator_goal_height = MAX_HEIGHT;
 
     while(1){
-        while (planta_elevator_current_height != elevator_goal_height){
-            if (planta_elevator_current_height < elevator_goal_height){
+        while (planta_elevator_current_height != planta_elevator_goal_height){
+            if (planta_elevator_current_height < planta_elevator_goal_height){
                 increaseHeight();
 
-            } else if (planta_elevator_current_height > elevator_goal_height){
+            } else if (planta_elevator_current_height > planta_elevator_goal_height){
                 decreaseHeight();
 
             }
@@ -135,6 +136,12 @@ void main_planta(void){
 
 void main_control(void){
     floorQueueInit();
+    height_floor_map[0] = 60;
+    height_floor_map[1] = 70;
+    height_floor_map[2] = 80;
+    height_floor_map[3] = 90;
+    height_floor_map[4] = 100;
+    height_floor_map[5] = 110;
 
     while(1){
         int i;
@@ -143,22 +150,22 @@ void main_control(void){
 
         switch(selected_floor){
             case 0:
-                selectFloor(0);
+                enqueueFloor(0);
                 break;
             case 2:
-                selectFloor(1);
+                enqueueFloor(1);
                 break;
             case 3:
-                selectFloor(2);
+                enqueueFloor(2);
                 break;
             case 5:
-                selectFloor(3);
+                enqueueFloor(3);
                 break;
             case 6:
-                selectFloor(4);
+                enqueueFloor(4);
                 break;
             case 8:
-                selectFloor(5);
+                enqueueFloor(5);
                 break;
             case 9:
                 // sendSosRequest();
@@ -169,74 +176,29 @@ void main_control(void){
             default:
                 continue;
         }
-
-        LCDClear();
-        int idx;
-        for (i = 0; i < fq.len; ++i) {
-            idx = (fq.tail + i) % FLOOR_QUEUE_SIZE;
-            char buffer[10];
-            if(i==5) LCDMoveSecondLine();
-            sprintf(buffer, " %u", fq.queue[idx]);
-            LCDPrint(buffer);
-        }
     }
-}
-
-void _ISR _C1Interrupt(void) {
-    if (C1INTFbits.RX0IF == 1) {
-        static unsigned int sid;
-        static unsigned char data[9];
-        static short dlc;
-        sid = C1RX0SIDbits.SID;
-        dlc = C1RX0DLCbits.DLC & 0x0F;
-        switch (dlc) {
-            case 8:
-                data[7] = (C1RX0B4 & 0xFF00) >> 8;
-            case 7:
-                data[6] = C1RX0B4 & 0x00FF;
-            case 6:
-                data[5] = (C1RX0B3 & 0xFF00) >> 8;
-            case 5:
-                data[4] = C1RX0B3 & 0x00FF;
-            case 4:
-                data[3] = (C1RX0B2 & 0xFF00) >> 8;
-            case 3:
-                data[2] = C1RX0B2 & 0x00FF;
-            case 2:
-                data[1] = (C1RX0B1 & 0xFF00) >> 8;
-            case 1:
-                data[0] = C1RX0B1 & 0x00FF;
-                break;
-        }
-
-        switch(sid){
-            case MOVE_REQUEST_SID:
-                break;
-            case MOVEMENT_STATUS_SID:
-                break;
-        }
-
-        // Clear rx buffer 0
-        C1RX0CONbits.RXFUL = 0;
-        // Clear CAN reception buffer 0 interrupt
-        C1INTFbits.RX0IF = 0;
-    }
-    // Clear CAN interrupt
-    IFS1bits.C1IF = 0;
 }
 
 inline void increaseHeight(void){
     planta_elevator_current_height += 1;
-    Delay15ms();Delay15ms();
+    int i; for (i = 0; i < 10; i++) Delay15ms();
     printHeight();
-    //sendMovementStatus();
+
+    struct MovementStatus ms;
+    ms.height = planta_elevator_current_height;
+    ms.height_reached = (planta_elevator_current_height == planta_elevator_goal_height);
+    sendMovementStatus(&ms);
 }
 
 inline void decreaseHeight(void){
     planta_elevator_current_height -= 1;
-    Delay15ms();
+    int i; for (i = 0; i < 10; i++) Delay15ms();
     printHeight();
-    //sendMovementStatus();
+
+    struct MovementStatus ms;
+    ms.height = planta_elevator_current_height;
+    ms.height_reached = (planta_elevator_current_height == planta_elevator_goal_height);
+    sendMovementStatus(&ms);
 }
 
 inline void printHeight(void){
@@ -247,25 +209,28 @@ inline void printHeight(void){
 }
 
 inline void processMoveRequest(struct MoveRequest *mr){
-    elevator_goal_height = mr->goal_height;
+    planta_elevator_goal_height = mr->goal_height;
 }
 
-inline void sendMovementStatus(void){
-    static struct MovementStatus ms;
-    ms.height = planta_elevator_current_height;
-    ms.height_reached = (planta_elevator_current_height == elevator_goal_height);
-    transmitCAN(MOVEMENT_STATUS_SID, (unsigned char *)&ms, sizeof(struct MovementStatus));
+inline void sendMovementStatus(struct MovementStatus *ms){
+    unsigned char data[2];
+    data[0] = ms->height;
+    data[1] = ms->height_reached;
+    transmitCAN(MOVEMENT_STATUS_SID, data, 2);
 }
 
-inline void selectFloor(unsigned short floor){
-    floorQueuePut(floor); // TEST
-    return;
+inline void enqueueFloor(unsigned short floor){
+    floorQueuePut(floor);
 
+    if (control_elevator_stopped && floorQueueIsEmpty()){
+        dequeueAndSendFloor();
+    }
+}
+
+inline void dequeueAndSendFloor(void){
     struct MoveRequest mr;
-    mr.goal_height = height_floor_map[floor];
-
-    if (elevator_stopped && floorQueueIsEmpty())    sendMoveRequest(&mr);
-    else                                            floorQueuePut(floor);
+    mr.goal_height = floorQueuePop();
+    sendMoveRequest(&mr);
 }
 
 inline void floorQueueInit(){
@@ -318,30 +283,77 @@ inline void sendMoveRequest(struct MoveRequest *mr){
 }
 
 inline void processMovementStatus(struct MovementStatus *ms){ //TODO: Demasiado compleja para estar en interrupcion?
-    static struct MoveRequest mr;
-    static unsigned short next_floor;
-
     control_elevator_current_height = ms->height;
 
     if (ms->height_reached){
 
         if (floorQueueIsEmpty()){
-            elevator_stopped = TRUE;
+            control_elevator_stopped = TRUE;
         } else {
-            next_floor = floorQueuePop();
-            mr.goal_height = next_floor;
-            sendMoveRequest(&mr);
+            dequeueAndSendFloor();
         }
     }
     else {
-        elevator_stopped = FALSE;
+        control_elevator_stopped = FALSE;
     }
 
-    if (elevator_stopped){
+    if (control_elevator_stopped){
         LCDClear();
         LCDPrint("Parado");
     } else {
         LCDClear();
         LCDPrint("En movimiento");
     }
+}
+
+void _ISR _C1Interrupt(void) {
+    if (C1INTFbits.RX0IF == 1) {
+        static unsigned int sid;
+        static unsigned char data[9];
+        static short dlc;
+        sid = C1RX0SIDbits.SID;
+        dlc = C1RX0DLCbits.DLC & 0x0F;
+        switch (dlc) {
+            case 8:
+                data[7] = (C1RX0B4 & 0xFF00) >> 8;
+            case 7:
+                data[6] = C1RX0B4 & 0x00FF;
+            case 6:
+                data[5] = (C1RX0B3 & 0xFF00) >> 8;
+            case 5:
+                data[4] = C1RX0B3 & 0x00FF;
+            case 4:
+                data[3] = (C1RX0B2 & 0xFF00) >> 8;
+            case 3:
+                data[2] = C1RX0B2 & 0x00FF;
+            case 2:
+                data[1] = (C1RX0B1 & 0xFF00) >> 8;
+            case 1:
+                data[0] = C1RX0B1 & 0x00FF;
+                break;
+        }
+
+
+        static struct MovementStatus ms;
+        static struct MoveRequest mr;
+
+        switch(sid){
+            case MOVE_REQUEST_SID:
+                mr.goal_height = data[0];
+                processMoveRequest(&mr);
+                break;
+            case MOVEMENT_STATUS_SID:
+                ms.height = data[0];
+                ms.height_reached = data[1];
+                processMovementStatus(&ms);
+                break;
+        }
+
+        // Clear rx buffer 0
+        C1RX0CONbits.RXFUL = 0;
+        // Clear CAN reception buffer 0 interrupt
+        C1INTFbits.RX0IF = 0;
+    }
+    // Clear CAN interrupt
+    IFS1bits.C1IF = 0;
 }
