@@ -13,14 +13,25 @@
 #include "dspic-libs/libCAN.h"
 #include "dspic-libs/delay.h"
 #include "dspic-libs/leds.h"
+#include "dspic-libs/terminal.h"
 
 
 #define TRUE 1
 #define FALSE 0
-#define MAX_HEIGHT 60 // La altura máxima soportada es de 65536
+#define MAX_HEIGHT 60 // La altura maxima soportada es de 65536
 #define MIN_HEIGHT 0
 #define NUM_FLOORS 6
 #define FLOOR_QUEUE_SIZE 6
+
+// Estados del ascensor
+#define STOPPED 0
+#define BLOCKED 1
+#define DISABLED 2
+#define ASCENDING 3
+#define DESCENDING 4
+
+// ASCII
+#define ESC_KEY 27
 
 /* IDENTIFICADORES DE PAQUETES */
 #define MOVE_REQUEST_SID 4
@@ -32,6 +43,7 @@
 struct MovementStatus {
     unsigned char height;
     unsigned char height_reached;
+    unsigned char status;
 };
 
 struct MoveRequest {
@@ -59,6 +71,8 @@ static struct FloorQueue fq;
 /* CONTROL */
 unsigned char control_elevator_stopped = TRUE;
 unsigned char control_elevator_current_height = 0;
+unsigned char control_current_electric_power = 0;
+unsigned char control_elevator_state = 0;
 
 inline unsigned short getFloor(unsigned char height);
 inline unsigned char getHeight(unsigned short floor);
@@ -68,6 +82,8 @@ inline void dequeueAndSendFloor(void);
 
 inline void processMovementStatus(struct MovementStatus *ms);
 inline void sendMoveRequest(struct MoveRequest *mr);
+
+inline void activateSosMode(void);
 
 void main_control(void);
 /* END CONTROL */
@@ -127,19 +143,17 @@ void main_planta(void){
         while (planta_elevator_current_height != planta_elevator_goal_height){
             if (planta_elevator_current_height < planta_elevator_goal_height){
                 increaseHeight();
-
             } else if (planta_elevator_current_height > planta_elevator_goal_height){
                 decreaseHeight();
-
             }
         }
         int i;
         for (i = 0; i < 100; i++) Delay15ms(); // Simulacion de abrir y cerrar puertas
-
     }
 }
 
 void main_control(void){
+    uartConfig();
     floorQueueInit();
 
     while(1){
@@ -167,7 +181,7 @@ void main_control(void){
                 enqueueFloor(5);
                 break;
             case 9:
-                // sendSosRequest();
+                activateSosMode();
                 break;
             case 11:
                 // sendStopRequest();
@@ -180,12 +194,13 @@ void main_control(void){
 
 inline void increaseHeight(void){
     planta_elevator_current_height += 1;
-    int i; for (i = 0; i < 10; i++) Delay15ms();
+    int i; for (i = 0; i < 20; i++) Delay15ms();
     printHeight();
 
     struct MovementStatus ms;
     ms.height = planta_elevator_current_height;
     ms.height_reached = (planta_elevator_current_height == planta_elevator_goal_height);
+    ms.status = ms.height_reached ? STOPPED : ASCENDING;
     sendMovementStatus(&ms);
 }
 
@@ -197,6 +212,7 @@ inline void decreaseHeight(void){
     struct MovementStatus ms;
     ms.height = planta_elevator_current_height;
     ms.height_reached = (planta_elevator_current_height == planta_elevator_goal_height);
+    ms.status = ms.height_reached ? STOPPED : DESCENDING;
     sendMovementStatus(&ms);
 }
 
@@ -215,11 +231,12 @@ inline void sendMovementStatus(struct MovementStatus *ms){
     unsigned char data[2];
     data[0] = ms->height;
     data[1] = ms->height_reached;
-    transmitCAN(MOVEMENT_STATUS_SID, data, 2);
+    data[2] = ms->status;
+    transmitCAN(MOVEMENT_STATUS_SID, data, 3);
 }
 
 inline unsigned short getFloor(unsigned char height){
-    return height / 10;
+    return (height % 10 == 0) ? height / 10 : -1;
 }
 inline unsigned char getHeight(unsigned short floor){
     return floor * 10;
@@ -231,7 +248,7 @@ inline void enqueueFloor(unsigned short floor){
     }
 
     setLed(floor, LED_ON);
-    
+
     if (control_elevator_stopped && floorQueueIsEmpty()){
         floorQueuePut(floor);
         dequeueAndSendFloor();
@@ -294,6 +311,7 @@ inline void sendMoveRequest(struct MoveRequest *mr){
 
 inline void processMovementStatus(struct MovementStatus *ms){
     control_elevator_current_height = ms->height;
+    control_elevator_state = ms->status;
     static unsigned short floor;
 
     if (ms->height_reached){
@@ -313,9 +331,76 @@ inline void processMovementStatus(struct MovementStatus *ms){
     }
     else {
         LCDClear();
-        LCDPrint(" En movimiento");
+        switch(ms->status){
+            case ASCENDING:
+                LCDPrint(" Subiendo.");
+                break;
+            case DESCENDING:
+                LCDPrint(" Bajando.");
+                break;
+        }
         control_elevator_stopped = FALSE;
     }
+}
+
+inline void activateSosMode(void){
+    int i;
+    LCDClear();
+    LCDPrint("    Modo S.O.S");
+    LCDMoveSecondLine();
+    LCDPrint("    activado");
+    char buffer[255];
+    sprintf(buffer, "MODO S.O.S ACTIVADO"
+            "\r\n-------------------\r\n"
+            "Altura: %u\r\n"
+            "Potencia electrica: %u\r\n"
+            "Estado: %u\r\n"
+            "Pulse un valor del 0 al 5 para seleccionar planta.\r\n"
+            "Pulse ESC para desactivar modo S.O.S.\r\n",
+            control_elevator_current_height,
+            control_current_electric_power,
+            control_elevator_state);
+
+    uartColocarCursor(0, 0);
+    i = 0;
+    while(buffer[i] != '\0'){
+        uartImprimir(buffer[i]);
+        ++i;
+    }
+
+    while(1){
+        switch(uartGetUltimaTecla()){
+            case '0':
+                enqueueFloor(0);
+                break;
+            case '1':
+                enqueueFloor(1);
+                break;
+            case '2':
+                enqueueFloor(2);
+                break;
+            case '3':
+                enqueueFloor(3);
+                break;
+            case '4':
+                enqueueFloor(4);
+                break;
+            case '5':
+                enqueueFloor(5);
+                break;
+            case ESC_KEY:
+                sprintf(buffer, "Desactivando modo S.O.S...\r\n\r\n");
+                i = 0;
+                while(buffer[i] != '\0'){
+                    uartImprimir(buffer[i]);
+                    ++i;
+                }
+                return;
+                break;
+        }
+        for(i = 0; i < 10; ++i) Delay15ms(); // Para evitar que la tecla de seleccion anterior se solape
+    }
+
 }
 
 void _ISR _C1Interrupt(void) {
@@ -357,6 +442,7 @@ void _ISR _C1Interrupt(void) {
             case MOVEMENT_STATUS_SID:
                 ms.height = data[0];
                 ms.height_reached = data[1];
+                ms.status = data[2];
                 processMovementStatus(&ms);
                 break;
         }
