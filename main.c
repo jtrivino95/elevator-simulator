@@ -31,6 +31,7 @@
 #define MOVE_REQUEST_SID 4
 #define ELECTRIC_POWER_STATUS_SID 5
 #define MOVEMENT_STATUS_SID 6
+#define ALARM_REQUEST_SID 7
 
 // PAQUETES
 struct MovementStatus {
@@ -49,7 +50,7 @@ struct AlarmRequest {
 
 struct ElectricPowerStatus {
     unsigned char electric_power;
-}
+};
 
 /* FUNCIONES Y VARIABLES PARA CONTROL */
 struct FloorQueue {
@@ -88,10 +89,9 @@ inline void processAlarmRequest(struct AlarmRequest *ar);
 
 
 /* FUNCIONES Y VARIABLES PARA CONTROL */
-unsigned char control_elevator_stopped = TRUE;
 unsigned char control_elevator_current_height = 0;
 unsigned char control_current_electric_power = 0;
-unsigned char control_elevator_state = 0;
+unsigned char control_elevator_state = STOPPED;
 
 // Con estas dos funciones se mantiene una relacion planta-altura
 inline unsigned short getFloor(unsigned char height);
@@ -106,7 +106,6 @@ inline void processElectricPowerStatus(struct ElectricPowerStatus *eps);
 inline void sendMoveRequest(struct MoveRequest *mr);
 inline void sendAlarmRequest(struct AlarmRequest *ar);
 inline void sendStopRequest(void);
-
 inline void activateSosMode(void);
 inline void activateLowElectricPowerProtocol(void);
 
@@ -131,13 +130,13 @@ inline void sendElectricPowerStatus(struct ElectricPowerStatus *eps);
 void main_planta(void);
 /* END PLANTA */
 
-
 int main(void) {
     keyboardInit();
     LCDInit();
     initCAN();
     timerInit();
     ADCInit();
+    initLeds();
     
     LCDPrint("0. Control");
     LCDMoveSecondLine();
@@ -166,28 +165,44 @@ int main(void) {
 void main_planta(void){
     planta_elevator_current_height = MAX_HEIGHT;
     planta_elevator_goal_height = MAX_HEIGHT;
+    stop_protocol_activated = FALSE;
 
     // Configurar el timer para lanzar interrupcion cada segundo
-    unsigned int max_counter_value;
-    unsigned short prescaling_factor;
-    unsigned char freq, priority;
-    prescaling_factor = 256;
-    freq = 1;
-    priority = 4;
-    max_counter_value = 39062; // 1 interrupcion/segundo
-    timerConfig(max_counter_value, PRESCALING_FACTOR_256, priority);
+//    unsigned int max_counter_value = 39062; // 1 interrupcion/segundo
+//    unsigned short prescaling_factor = 256;
+//    unsigned char freq = 1, priority = 4;
+//    timerConfig(max_counter_value, PRESCALING_FACTOR_256, priority);
 
     while(1){
 
-        if (stop_protocol_activated) continue;
-
         // Se intenta mantener la altura del ascensor en el valor de $planta_elevator_goal_height
         while (planta_elevator_current_height != planta_elevator_goal_height){
+
+            if(stop_protocol_activated){
+                setLed(0, LED_ON);
+                planta_elevator_goal_height = planta_elevator_current_height;
+            } else {
+                setLed(0, LED_OFF);
+            }
+
             if (planta_elevator_current_height < planta_elevator_goal_height){
                 increaseHeight();
-            } else { // planta_elevator_current_height > planta_elevator_goal_height
+            } else if (planta_elevator_current_height > planta_elevator_goal_height) { // planta_elevator_current_height > planta_elevator_goal_height
                 decreaseHeight();
             }
+
+            struct MovementStatus ms;
+            if (planta_elevator_current_height < planta_elevator_goal_height){
+                ms.state = ASCENDING;
+            } else if (planta_elevator_current_height > planta_elevator_goal_height) { // planta_elevator_current_height > planta_elevator_goal_height
+                ms.state = DESCENDING;
+            } else {
+                ms.state = STOPPED;
+            }
+            
+            ms.height = planta_elevator_current_height;
+            ms.height_reached = (planta_elevator_current_height == planta_elevator_goal_height);
+            sendMovementStatus(&ms);
         }
         int i;
         for (i = 0; i < 100; i++) Delay15ms(); // TODO: quiza esto no vaya aqui
@@ -197,7 +212,6 @@ void main_planta(void){
 void main_control(void){
     uartConfig();
     floorQueueInit();
-    initLeds();
 
     unsigned short selected_floor;
 
@@ -239,26 +253,14 @@ void main_control(void){
 
 inline void increaseHeight(void){
     planta_elevator_current_height += 1;
-    int i; for (i = 0; i < 20; i++) Delay15ms();
+    int i; for (i = 0; i < 10; i++) Delay15ms();
     printHeight();
-
-    struct MovementStatus ms;
-    ms.height = planta_elevator_current_height;
-    ms.height_reached = (planta_elevator_current_height == planta_elevator_goal_height);
-    ms.state = ms.height_reached ? STOPPED : ASCENDING;
-    sendMovementStatus(&ms);
 }
 
 inline void decreaseHeight(void){
     planta_elevator_current_height -= 1;
     int i; for (i = 0; i < 10; i++) Delay15ms();
     printHeight();
-
-    struct MovementStatus ms;
-    ms.height = planta_elevator_current_height;
-    ms.height_reached = (planta_elevator_current_height == planta_elevator_goal_height);
-    ms.state = ms.height_reached ? STOPPED : DESCENDING;
-    sendMovementStatus(&ms);
 }
 
 inline void printHeight(void){
@@ -295,7 +297,9 @@ inline void enqueueFloor(unsigned short floor){
 
     setLed(floor, LED_ON);
 
-    if (control_elevator_stopped && floorQueueIsEmpty()){
+    char elevator_stopped = (control_elevator_state == STOPPED);
+
+    if (elevator_stopped && floorQueueIsEmpty()){
         floorQueuePut(floor);
         dequeueAndSendFloor();
     } else {
@@ -373,41 +377,39 @@ inline void processMovementStatus(struct MovementStatus *ms){
     control_elevator_state = ms->state;
     static unsigned short floor;
 
-    if (ms->height_reached){
-        LCDClear();
-        static char buffer[10];
-        sprintf(buffer, " Planta %u.", getFloor(ms->height));
-        LCDPrint(buffer);
+    LCDClear();
+    if(ms->state == STOPPED){
+        char floor_reached = ms->height % 10 == 0;
+        if(floor_reached){
+            static char buffer[10];
+            sprintf(buffer, " Planta %u.", getFloor(ms->height));
+            LCDPrint(buffer);
 
-        floor = getFloor(ms->height);
-        setLed(floor, LED_OFF);
+            floor = getFloor(ms->height);
+            setLed(floor, LED_OFF);
 
-        if (floorQueueIsEmpty()){
-            control_elevator_stopped = TRUE;
+            if (!floorQueueIsEmpty()){
+                dequeueAndSendFloor();
+            }
         } else {
-            dequeueAndSendFloor();
+            LCDPrint(" Ascensor");
+            LCDMoveSecondLine();
+            LCDPrint("bloqueado.");
         }
-    }
-    else {
-        LCDClear();
-        switch(ms->state){
-            case ASCENDING:
-                LCDPrint(" Subiendo.");
-                break;
-            case DESCENDING:
-                LCDPrint(" Bajando.");
-                break;
-        }
-        control_elevator_stopped = FALSE;
+    } else if(ms->state == ASCENDING){
+        LCDPrint(" Subiendo.");
+    } else if(ms->state == DESCENDING){
+        LCDPrint(" Bajando.");
     }
 }
 
 inline void sendStopRequest(void){
     // Resetear la cola de plantas
+    int i;
+    for (i = 0; i < FLOOR_QUEUE_SIZE; i++) setLed(i, LED_OFF);
     while(!floorQueueIsEmpty()) floorQueuePop();
 
     transmitCAN(STOP_REQUEST_SID, NULL, 0);
-    control_elevator_state = STOPPED;
 }
 
 inline void sendElectricPowerStatus(struct ElectricPowerStatus *eps){
@@ -430,8 +432,8 @@ inline void processElectricPowerStatus(struct ElectricPowerStatus *eps){
 inline void activateSosMode(void){
     struct AlarmRequest ar;
     ar.time_seconds = 2;
-    sendAlarmRequest(&ar);
-    sendStopRequest();
+//    sendAlarmRequest(&ar);
+//    sendStopRequest();
 
     // Imprimir en LCD 
     LCDClear();
@@ -564,7 +566,7 @@ void _ISR _C1Interrupt(void) {
 
             case ALARM_REQUEST_SID:
                 ar.time_seconds = data[0];
-                processAlarmRequest(&ar);
+//                processAlarmRequest(&ar);
                 break;
 
             case ELECTRIC_POWER_STATUS_SID:
@@ -583,8 +585,10 @@ void _ISR _C1Interrupt(void) {
 }
 
 void _ISR _T1Interrupt(void){
-    static short adc_value = ADCGetValue();
+    static short adc_value;
     static struct ElectricPowerStatus eps;
+    
+    adc_value = ADCGetValue();
     eps.electric_power = (unsigned char) adc_value / 4; // TODO: buena decision?
 
     sendElectricPowerStatus(&eps);
