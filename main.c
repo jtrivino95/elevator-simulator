@@ -168,10 +168,11 @@ void main_planta(void){
     stop_protocol_activated = FALSE;
 
     // Configurar el timer para lanzar interrupcion cada segundo
-//    unsigned int max_counter_value = 39062; // 1 interrupcion/segundo
-//    unsigned short prescaling_factor = 256;
-//    unsigned char freq = 1, priority = 4;
-//    timerConfig(max_counter_value, PRESCALING_FACTOR_256, priority);
+    unsigned int max_counter_value = 39062; // 1 interrupcion/segundo
+    unsigned short prescaling_factor = 256;
+    unsigned char freq = 1, priority = 4;
+    timerConfig(max_counter_value, PRESCALING_FACTOR_256, priority);
+    timerStart();
 
     while(1){
 
@@ -187,14 +188,14 @@ void main_planta(void){
 
             if (planta_elevator_current_height < planta_elevator_goal_height){
                 increaseHeight();
-            } else if (planta_elevator_current_height > planta_elevator_goal_height) { // planta_elevator_current_height > planta_elevator_goal_height
+            } else if (planta_elevator_current_height > planta_elevator_goal_height) {
                 decreaseHeight();
             }
 
             struct MovementStatus ms;
             if (planta_elevator_current_height < planta_elevator_goal_height){
                 ms.state = ASCENDING;
-            } else if (planta_elevator_current_height > planta_elevator_goal_height) { // planta_elevator_current_height > planta_elevator_goal_height
+            } else if (planta_elevator_current_height > planta_elevator_goal_height) {
                 ms.state = DESCENDING;
             } else {
                 ms.state = STOPPED;
@@ -423,10 +424,11 @@ inline void processStopRequest(void){
 }
 
 inline void processElectricPowerStatus(struct ElectricPowerStatus *eps){
-    /*if(eps->electric_power < 220){
-        sendStopRequest();
-        activateSosMode();
-    }*/
+    if (eps->electric_power < 220){
+        LCDClear();LCDPrint(" potencia baja");
+        // sendStopRequest();
+        // activateSosMode();
+    }
 }
 
 inline void activateSosMode(void){
@@ -591,7 +593,8 @@ void _ISR _T1Interrupt(void){
     adc_value = ADCGetValue();
     eps.electric_power = (unsigned char) adc_value / 4; // TODO: buena decision?
 
-    sendElectricPowerStatus(&eps);
+    //sendElectricPowerStatus(&eps);
+    setLed(1, LED_ON);Delay15ms();setLed(1, LED_OFF);
 
     IFS0bits.T1IF = 0; // Limpiar flag de estado
 }
