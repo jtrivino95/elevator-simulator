@@ -45,17 +45,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=dspic-libs/adc.c dspic-libs/buzzer.c dspic-libs/keyboard.c dspic-libs/LCDlib.c dspic-libs/leds.c dspic-libs/timer.c dspic-libs/delay.s main.c dspic-libs/libCAN.c
+SOURCEFILES_QUOTED_IF_SPACED=dspic-libs/adc.c dspic-libs/buzzer.c dspic-libs/keyboard.c dspic-libs/LCDlib.c dspic-libs/leds.c dspic-libs/timer.c dspic-libs/delay.s dspic-libs/libCAN.c dspic-libs/terminal.c main.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/dspic-libs/adc.o ${OBJECTDIR}/dspic-libs/buzzer.o ${OBJECTDIR}/dspic-libs/keyboard.o ${OBJECTDIR}/dspic-libs/LCDlib.o ${OBJECTDIR}/dspic-libs/leds.o ${OBJECTDIR}/dspic-libs/timer.o ${OBJECTDIR}/dspic-libs/delay.o ${OBJECTDIR}/main.o ${OBJECTDIR}/dspic-libs/libCAN.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/dspic-libs/adc.o.d ${OBJECTDIR}/dspic-libs/buzzer.o.d ${OBJECTDIR}/dspic-libs/keyboard.o.d ${OBJECTDIR}/dspic-libs/LCDlib.o.d ${OBJECTDIR}/dspic-libs/leds.o.d ${OBJECTDIR}/dspic-libs/timer.o.d ${OBJECTDIR}/dspic-libs/delay.o.d ${OBJECTDIR}/main.o.d ${OBJECTDIR}/dspic-libs/libCAN.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/dspic-libs/adc.o ${OBJECTDIR}/dspic-libs/buzzer.o ${OBJECTDIR}/dspic-libs/keyboard.o ${OBJECTDIR}/dspic-libs/LCDlib.o ${OBJECTDIR}/dspic-libs/leds.o ${OBJECTDIR}/dspic-libs/timer.o ${OBJECTDIR}/dspic-libs/delay.o ${OBJECTDIR}/dspic-libs/libCAN.o ${OBJECTDIR}/dspic-libs/terminal.o ${OBJECTDIR}/main.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/dspic-libs/adc.o.d ${OBJECTDIR}/dspic-libs/buzzer.o.d ${OBJECTDIR}/dspic-libs/keyboard.o.d ${OBJECTDIR}/dspic-libs/LCDlib.o.d ${OBJECTDIR}/dspic-libs/leds.o.d ${OBJECTDIR}/dspic-libs/timer.o.d ${OBJECTDIR}/dspic-libs/delay.o.d ${OBJECTDIR}/dspic-libs/libCAN.o.d ${OBJECTDIR}/dspic-libs/terminal.o.d ${OBJECTDIR}/main.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/dspic-libs/adc.o ${OBJECTDIR}/dspic-libs/buzzer.o ${OBJECTDIR}/dspic-libs/keyboard.o ${OBJECTDIR}/dspic-libs/LCDlib.o ${OBJECTDIR}/dspic-libs/leds.o ${OBJECTDIR}/dspic-libs/timer.o ${OBJECTDIR}/dspic-libs/delay.o ${OBJECTDIR}/main.o ${OBJECTDIR}/dspic-libs/libCAN.o
+OBJECTFILES=${OBJECTDIR}/dspic-libs/adc.o ${OBJECTDIR}/dspic-libs/buzzer.o ${OBJECTDIR}/dspic-libs/keyboard.o ${OBJECTDIR}/dspic-libs/LCDlib.o ${OBJECTDIR}/dspic-libs/leds.o ${OBJECTDIR}/dspic-libs/timer.o ${OBJECTDIR}/dspic-libs/delay.o ${OBJECTDIR}/dspic-libs/libCAN.o ${OBJECTDIR}/dspic-libs/terminal.o ${OBJECTDIR}/main.o
 
 # Source Files
-SOURCEFILES=dspic-libs/adc.c dspic-libs/buzzer.c dspic-libs/keyboard.c dspic-libs/LCDlib.c dspic-libs/leds.c dspic-libs/timer.c dspic-libs/delay.s main.c dspic-libs/libCAN.c
+SOURCEFILES=dspic-libs/adc.c dspic-libs/buzzer.c dspic-libs/keyboard.c dspic-libs/LCDlib.c dspic-libs/leds.c dspic-libs/timer.c dspic-libs/delay.s dspic-libs/libCAN.c dspic-libs/terminal.c main.c
 
 
 CFLAGS=
@@ -124,19 +124,26 @@ ${OBJECTDIR}/dspic-libs/timer.o: dspic-libs/timer.c  nbproject/Makefile-${CND_CO
 	${MP_CC} $(MP_EXTRA_CC_PRE)  dspic-libs/timer.c  -o ${OBJECTDIR}/dspic-libs/timer.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/dspic-libs/timer.o.d"      -g -D__DEBUG -D__MPLAB_DEBUGGER_ICD3=1    -omf=elf -O0 -msmart-io=1 -Wall -msfr-warn=off
 	@${FIXDEPS} "${OBJECTDIR}/dspic-libs/timer.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
 	
-${OBJECTDIR}/main.o: main.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} ${OBJECTDIR} 
-	@${RM} ${OBJECTDIR}/main.o.d 
-	@${RM} ${OBJECTDIR}/main.o 
-	${MP_CC} $(MP_EXTRA_CC_PRE)  main.c  -o ${OBJECTDIR}/main.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/main.o.d"      -g -D__DEBUG -D__MPLAB_DEBUGGER_ICD3=1    -omf=elf -O0 -msmart-io=1 -Wall -msfr-warn=off
-	@${FIXDEPS} "${OBJECTDIR}/main.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
-	
 ${OBJECTDIR}/dspic-libs/libCAN.o: dspic-libs/libCAN.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} ${OBJECTDIR}/dspic-libs 
 	@${RM} ${OBJECTDIR}/dspic-libs/libCAN.o.d 
 	@${RM} ${OBJECTDIR}/dspic-libs/libCAN.o 
 	${MP_CC} $(MP_EXTRA_CC_PRE)  dspic-libs/libCAN.c  -o ${OBJECTDIR}/dspic-libs/libCAN.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/dspic-libs/libCAN.o.d"      -g -D__DEBUG -D__MPLAB_DEBUGGER_ICD3=1    -omf=elf -O0 -msmart-io=1 -Wall -msfr-warn=off
 	@${FIXDEPS} "${OBJECTDIR}/dspic-libs/libCAN.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/dspic-libs/terminal.o: dspic-libs/terminal.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} ${OBJECTDIR}/dspic-libs 
+	@${RM} ${OBJECTDIR}/dspic-libs/terminal.o.d 
+	@${RM} ${OBJECTDIR}/dspic-libs/terminal.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE)  dspic-libs/terminal.c  -o ${OBJECTDIR}/dspic-libs/terminal.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/dspic-libs/terminal.o.d"      -g -D__DEBUG -D__MPLAB_DEBUGGER_ICD3=1    -omf=elf -O0 -msmart-io=1 -Wall -msfr-warn=off
+	@${FIXDEPS} "${OBJECTDIR}/dspic-libs/terminal.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/main.o: main.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} ${OBJECTDIR} 
+	@${RM} ${OBJECTDIR}/main.o.d 
+	@${RM} ${OBJECTDIR}/main.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE)  main.c  -o ${OBJECTDIR}/main.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/main.o.d"      -g -D__DEBUG -D__MPLAB_DEBUGGER_ICD3=1    -omf=elf -O0 -msmart-io=1 -Wall -msfr-warn=off
+	@${FIXDEPS} "${OBJECTDIR}/main.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
 	
 else
 ${OBJECTDIR}/dspic-libs/adc.o: dspic-libs/adc.c  nbproject/Makefile-${CND_CONF}.mk
@@ -181,19 +188,26 @@ ${OBJECTDIR}/dspic-libs/timer.o: dspic-libs/timer.c  nbproject/Makefile-${CND_CO
 	${MP_CC} $(MP_EXTRA_CC_PRE)  dspic-libs/timer.c  -o ${OBJECTDIR}/dspic-libs/timer.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/dspic-libs/timer.o.d"        -g -omf=elf -O0 -msmart-io=1 -Wall -msfr-warn=off
 	@${FIXDEPS} "${OBJECTDIR}/dspic-libs/timer.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
 	
-${OBJECTDIR}/main.o: main.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} ${OBJECTDIR} 
-	@${RM} ${OBJECTDIR}/main.o.d 
-	@${RM} ${OBJECTDIR}/main.o 
-	${MP_CC} $(MP_EXTRA_CC_PRE)  main.c  -o ${OBJECTDIR}/main.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/main.o.d"        -g -omf=elf -O0 -msmart-io=1 -Wall -msfr-warn=off
-	@${FIXDEPS} "${OBJECTDIR}/main.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
-	
 ${OBJECTDIR}/dspic-libs/libCAN.o: dspic-libs/libCAN.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} ${OBJECTDIR}/dspic-libs 
 	@${RM} ${OBJECTDIR}/dspic-libs/libCAN.o.d 
 	@${RM} ${OBJECTDIR}/dspic-libs/libCAN.o 
 	${MP_CC} $(MP_EXTRA_CC_PRE)  dspic-libs/libCAN.c  -o ${OBJECTDIR}/dspic-libs/libCAN.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/dspic-libs/libCAN.o.d"        -g -omf=elf -O0 -msmart-io=1 -Wall -msfr-warn=off
 	@${FIXDEPS} "${OBJECTDIR}/dspic-libs/libCAN.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/dspic-libs/terminal.o: dspic-libs/terminal.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} ${OBJECTDIR}/dspic-libs 
+	@${RM} ${OBJECTDIR}/dspic-libs/terminal.o.d 
+	@${RM} ${OBJECTDIR}/dspic-libs/terminal.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE)  dspic-libs/terminal.c  -o ${OBJECTDIR}/dspic-libs/terminal.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/dspic-libs/terminal.o.d"        -g -omf=elf -O0 -msmart-io=1 -Wall -msfr-warn=off
+	@${FIXDEPS} "${OBJECTDIR}/dspic-libs/terminal.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/main.o: main.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} ${OBJECTDIR} 
+	@${RM} ${OBJECTDIR}/main.o.d 
+	@${RM} ${OBJECTDIR}/main.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE)  main.c  -o ${OBJECTDIR}/main.o  -c -mcpu=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/main.o.d"        -g -omf=elf -O0 -msmart-io=1 -Wall -msfr-warn=off
+	@${FIXDEPS} "${OBJECTDIR}/main.o.d" $(SILENT)  -rsi ${MP_CC_DIR}../ 
 	
 endif
 

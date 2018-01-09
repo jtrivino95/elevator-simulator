@@ -10,6 +10,7 @@
       <itemPath>dspic-libs/timer.c</itemPath>
       <itemPath>dspic-libs/delay.s</itemPath>
       <itemPath>dspic-libs/libCAN.c</itemPath>
+      <itemPath>dspic-libs/terminal.c</itemPath>
     </logicalFolder>
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
@@ -22,6 +23,7 @@
       <itemPath>dspic-libs/leds.h</itemPath>
       <itemPath>dspic-libs/keyboard.h</itemPath>
       <itemPath>dspic-libs/libCAN.h</itemPath>
+      <itemPath>dspic-libs/terminal.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
